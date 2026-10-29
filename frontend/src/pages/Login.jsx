@@ -2,21 +2,36 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import AuthLayout, { authInputClass } from '../components/AuthLayout'
-import { login } from '../services/api'
+import axios from 'axios'
 
 const Login = () => {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
+  const [user, setUser] = useState({
+    email : "",
+    password : ""
+  })
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setSubmitting(true)
-    const { token } = await login(Object.fromEntries(new FormData(e.target)))
-    localStorage.setItem('token', token)
-    navigate('/profile')
+  const getValue = (e) => {
+    setUser({
+      ...user,
+      [e.target.name] : e.target.value
+    })
   }
 
+  const submitForm = async (e) => {
+    e.preventDefault()
+    try {
+      await axios.post("http://localhost:8000/api/user/login", user, {
+        withCredentials : true
+      });
+      console.log("User loggedin successfully")
+      alert("User loggedin successfully")
+      navigate("/")
+    } catch (error) {
+      console.log(error)
+    }
+  }
   return (
     <AuthLayout
       title="Welcome back"
@@ -30,12 +45,12 @@ const Login = () => {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form className="space-y-5" onSubmit={submitForm}>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span>
           <div className="relative">
             <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input name="email" type="email" required placeholder="you@example.com" className={authInputClass} />
+            <input name="email" type="email" required placeholder="you@example.com" className={authInputClass} value = {user.email} onChange={getValue} />
           </div>
         </label>
         <label className="block">
@@ -51,6 +66,7 @@ const Login = () => {
               required
               placeholder="••••••••"
               className={authInputClass}
+              value = {user.password} onChange={getValue}
             />
             <button
               type="button"
@@ -67,10 +83,9 @@ const Login = () => {
         </label>
         <button
           type="submit"
-          disabled={submitting}
-          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-70"
+          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
         >
-          {submitting ? 'Signing in…' : 'Sign In'}
+          Sign In
         </button>
       </form>
     </AuthLayout>

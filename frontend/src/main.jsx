@@ -3,14 +3,11 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import './index.css'
 import App from './App.jsx'
-import { ShopProvider } from './context/ShopContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <ShopProvider>
-        <App />
-      </ShopProvider>
+      <App />
     </BrowserRouter>
   </StrictMode>,
 )

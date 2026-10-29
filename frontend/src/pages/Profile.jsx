@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { FiUser, FiPackage, FiHeart, FiMapPin, FiSettings, FiLogOut, FiEdit2, FiShoppingBag, FiDollarSign } from 'react-icons/fi'
-import { Spinner } from '../components/Skeletons'
-import { useShop } from '../context/ShopContext'
-import { getOrders, getProfile } from '../services/api'
+import { orders, user } from '../data/mockData'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FiUser },
@@ -60,17 +57,6 @@ const OrdersTable = ({ orders }) => (
 const Profile = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'overview'
-  const { wishlist, cartCount } = useShop()
-  const [data, setData] = useState(null)
-
-  useEffect(() => {
-    Promise.all([getProfile(), getOrders()]).then(([user, orders]) => setData({ user, orders }))
-  }, [])
-
-  if (!data) return <Spinner />
-
-  const { user, orders } = data
-  const totalSpent = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total, 0)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12">
@@ -102,7 +88,6 @@ const Profile = () => {
             </Link>
             <Link
               to="/login"
-              onClick={() => localStorage.removeItem('token')}
               className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-rose-600 hover:bg-rose-50"
             >
               <FiLogOut className="h-4 w-4" /> Logout
@@ -122,9 +107,9 @@ const Profile = () => {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   { icon: FiPackage, label: 'Total Orders', value: orders.length, color: 'bg-blue-50 text-blue-600' },
-                  { icon: FiDollarSign, label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, color: 'bg-emerald-50 text-emerald-600' },
-                  { icon: FiHeart, label: 'Wishlist', value: wishlist.length, color: 'bg-rose-50 text-rose-600' },
-                  { icon: FiShoppingBag, label: 'In Cart', value: cartCount, color: 'bg-amber-50 text-amber-600' },
+                  { icon: FiDollarSign, label: 'Total Spent', value: '$676.99', color: 'bg-emerald-50 text-emerald-600' },
+                  { icon: FiHeart, label: 'Wishlist', value: 2, color: 'bg-rose-50 text-rose-600' },
+                  { icon: FiShoppingBag, label: 'In Cart', value: 3, color: 'bg-amber-50 text-amber-600' },
                 ].map(({ icon: Icon, label, value, color }) => (
                   <div key={label} className="rounded-3xl bg-white p-6 ring-1 ring-slate-100">
                     <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${color}`}>

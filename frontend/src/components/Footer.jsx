@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
-import { subscribeNewsletter } from '../services/api'
 import { FiMapPin, FiPhone, FiMail, FiSend, FiTruck, FiShield, FiRefreshCw, FiHeadphones } from 'react-icons/fi'
 import { FaFacebookF, FaInstagram, FaXTwitter, FaYoutube, FaLinkedinIn } from 'react-icons/fa6'
 
@@ -50,16 +48,6 @@ const socialLinks = [
 ]
 
 const Footer = () => {
-  const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
-
-  const handleSubscribe = async (e) => {
-    e.preventDefault()
-    await subscribeNewsletter(email)
-    setSubscribed(true)
-    setEmail('')
-  }
-
   return (
     <footer className="bg-slate-900 text-slate-400">
       {/* Features strip */}
@@ -111,12 +99,10 @@ const Footer = () => {
         <div>
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">Newsletter</h3>
           <p className="mb-4 text-sm">Get exclusive offers and updates.</p>
-          <form onSubmit={handleSubscribe} className="flex">
+          <form className="flex">
             <input
               type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email"
               className="w-full min-w-0 rounded-l-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
             />
@@ -128,7 +114,6 @@ const Footer = () => {
               <FiSend />
             </button>
           </form>
-          {subscribed && <p className="mt-2 text-xs text-emerald-400">Thanks for subscribing!</p>}
           <div className="mt-5 flex gap-2">
             {socialLinks.map(({ icon: Icon, label, href }) => (
               <a

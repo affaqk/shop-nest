@@ -2,10 +2,10 @@ import { Link } from 'react-router'
 import { FiHeart, FiArrowRight } from 'react-icons/fi'
 import PageHeader from '../components/PageHeader'
 import ProductCard from '../components/ProductCard'
-import { useShop } from '../context/ShopContext'
+import { products } from '../data/mockData'
 
 const Wishlist = () => {
-  const { wishlist } = useShop()
+  const wishlist = products.slice(0, 4)
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router'
+import { Link, NavLink, useLocation } from 'react-router'
 import {
   FiSearch,
   FiUser,
@@ -15,7 +15,6 @@ import {
   FiMail,
 } from 'react-icons/fi'
 import { FaFacebookF, FaInstagram, FaXTwitter, FaYoutube, FaLinkedinIn } from 'react-icons/fa6'
-import { useShop } from '../context/ShopContext'
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -37,11 +36,8 @@ const socialLinks = [
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const profileRef = useRef(null)
-  const navigate = useNavigate()
   const location = useLocation()
-  const { cartCount, wishlist } = useShop()
 
   // Close menus when the route changes
   const [prevLocation, setPrevLocation] = useState(location)
@@ -61,12 +57,6 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    const q = query.trim()
-    navigate(q ? `/shop?search=${encodeURIComponent(q)}` : '/shop')
-  }
 
   const isActive = (to) => {
     const [path, search] = to.split('?')
@@ -115,12 +105,10 @@ const Navbar = () => {
         </Link>
 
         {/* Search (desktop) */}
-        <form onSubmit={handleSearch} className="mx-4 hidden flex-1 md:flex">
+        <form className="mx-4 hidden flex-1 md:flex">
           <div className="relative w-full">
             <input
               type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
               placeholder="Search for products, brands and more..."
               className="w-full rounded-full border border-slate-300 bg-slate-50 py-2.5 pl-5 pr-12 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
             />
@@ -138,19 +126,15 @@ const Navbar = () => {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Link to="/wishlist" className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100" aria-label="Wishlist">
             <FiHeart className="h-6 w-6" />
-            {wishlist.length > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-                {wishlist.length}
-              </span>
-            )}
+            <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+              2
+            </span>
           </Link>
           <Link to="/cart" className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100" aria-label="Cart">
             <FiShoppingCart className="h-6 w-6" />
-            {cartCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                {cartCount}
-              </span>
-            )}
+            <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              3
+            </span>
           </Link>
 
           {/* Profile dropdown */}
@@ -204,13 +188,11 @@ const Navbar = () => {
       </div>
 
       {/* Search (mobile) */}
-      <form onSubmit={handleSearch} className="px-4 pb-3 md:hidden">
+      <form className="px-4 pb-3 md:hidden">
         <div className="relative">
           <FiSearch className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search products..."
             className="w-full rounded-full border border-slate-300 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
           />

@@ -1,27 +1,41 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import axios from "axios"
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import AuthLayout, { authInputClass } from '../components/AuthLayout'
-import { register } from '../services/api'
 
 const Register = () => {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const data = Object.fromEntries(new FormData(e.target))
-    if (data.password !== data.confirmPassword) return setError('Passwords do not match.')
-    if (data.password.length < 8) return setError('Password must be at least 8 characters.')
-    setError('')
-    setSubmitting(true)
-    const { token } = await register(data)
-    localStorage.setItem('token', token)
-    navigate('/profile')
+  const [user, setUser] = useState({
+    name : "",
+    email : "",
+    password : "",
+    profile : ""
+  })
+
+  const getValue = (e) => {
+    setUser({
+      ...user,
+      [e.target.name] : e.target.value
+    })
   }
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log("clicked")
+    try {
+      await axios.post("http://localhost:8000/api/user/register", user, {
+        withCredentials : true
+      })
+      console.log("User registered successfully")
+      alert("User registered successfully")
+      navigate("/")
+    } catch (error) {
+      console.log(error)
+    }
+  }
   return (
     <AuthLayout
       title="Create account"
@@ -35,19 +49,19 @@ const Register = () => {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form className="space-y-5" onSubmit={handleSubmit}>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
           <div className="relative">
             <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input name="name" required placeholder="Jane Doe" className={authInputClass} />
+            <input name="name" required placeholder="Jane Doe" className={authInputClass} value = {user.name} onChange = {getValue} />
           </div>
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span>
           <div className="relative">
             <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input name="email" type="email" required placeholder="you@example.com" className={authInputClass} />
+            <input name="email" type="email" required placeholder="you@example.com" className={authInputClass} value = {user.email} onChange = {getValue}/>
           </div>
         </label>
         <div className="grid gap-5 sm:grid-cols-2">
@@ -59,6 +73,7 @@ const Register = () => {
                 name="password"
                 type={showPassword ? 'text' : 'password'}
                 required
+                value = {user.password} onChange = {getValue}
                 placeholder="Min. 8 characters"
                 className={authInputClass}
               />
@@ -69,11 +84,12 @@ const Register = () => {
             <div className="relative">
               <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                name="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
+                name="profile"
+                type="text"
                 required
-                placeholder="Repeat password"
+                placeholder="Profile url..."
                 className={authInputClass}
+                value = {user.profile} onChange = {getValue}
               />
               <button
                 type="button"
@@ -93,13 +109,11 @@ const Register = () => {
             <a href="#" className="font-medium text-blue-600 hover:underline">Privacy Policy</a>
           </span>
         </label>
-        {error && <p className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-600">{error}</p>}
         <button
           type="submit"
-          disabled={submitting}
-          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-70"
+          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
         >
-          {submitting ? 'Creating account…' : 'Create Account'}
+          Create Account
         </button>
       </form>
     </AuthLayout>

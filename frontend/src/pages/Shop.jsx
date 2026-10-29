@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { FiFilter, FiX, FiSearch } from 'react-icons/fi'
 import PageHeader from '../components/PageHeader'
 import ProductCard from '../components/ProductCard'
-import { ProductGridSkeleton } from '../components/Skeletons'
-import { getProducts } from '../services/api'
-import { categories } from '../data/mockData'
+import { categories, products } from '../data/mockData'
 
 const sortOptions = [
   { value: '', label: 'Featured' },
@@ -20,25 +18,11 @@ const MAX_PRICE = 300
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [result, setResult] = useState({ key: null, products: [] })
 
   const category = searchParams.get('category') || ''
   const search = searchParams.get('search') || ''
   const sort = searchParams.get('sort') || ''
   const maxPrice = Number(searchParams.get('maxPrice')) || MAX_PRICE
-
-  const requestKey = searchParams.toString()
-  const loading = result.key !== requestKey
-
-  useEffect(() => {
-    let active = true
-    getProducts({ category, search, sort, maxPrice }).then((products) => {
-      if (active) setResult({ key: requestKey, products })
-    })
-    return () => {
-      active = false
-    }
-  }, [category, search, sort, maxPrice, requestKey])
 
   const updateParam = (key, value) => {
     const next = new URLSearchParams(searchParams)
@@ -149,11 +133,7 @@ const Shop = () => {
                 <FiFilter /> Filters
               </button>
               <p className="text-sm text-slate-500">
-                {loading ? 'Loading…' : (
-                  <>
-                    Showing <span className="font-semibold text-slate-900">{result.products.length}</span> products
-                  </>
-                )}
+                Showing <span className="font-semibold text-slate-900">{products.length}</span> products
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -198,11 +178,9 @@ const Shop = () => {
             </div>
           )}
 
-          {loading ? (
-            <ProductGridSkeleton count={6} className="lg:grid-cols-3" />
-          ) : result.products.length ? (
+          {products.length ? (
             <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
-              {result.products.map((product) => (
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

@@ -1,7 +1,5 @@
-import { useState } from 'react'
-import { FiMapPin, FiPhone, FiMail, FiClock, FiSend, FiCheckCircle } from 'react-icons/fi'
+import { FiMapPin, FiPhone, FiMail, FiClock, FiSend } from 'react-icons/fi'
 import PageHeader from '../components/PageHeader'
-import { sendContactMessage } from '../services/api'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
@@ -20,16 +18,6 @@ const faqs = [
 ]
 
 const Contact = () => {
-  const [status, setStatus] = useState('idle')
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setStatus('sending')
-    await sendContactMessage(Object.fromEntries(new FormData(e.target)))
-    e.target.reset()
-    setStatus('sent')
-  }
-
   return (
     <>
       <PageHeader
@@ -54,7 +42,7 @@ const Contact = () => {
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_24rem]">
-          <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-10">
+          <form className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-10">
             <h2 className="font-display text-3xl font-semibold text-slate-900">Send us a message</h2>
             <p className="mt-2 text-slate-500">Fill out the form and we will get back to you shortly.</p>
             <div className="mt-8 grid gap-5 sm:grid-cols-2">
@@ -80,17 +68,11 @@ const Contact = () => {
                 <textarea name="message" required rows="6" className={`${inputClass} resize-none`} />
               </label>
             </div>
-            {status === 'sent' && (
-              <p className="mt-6 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                <FiCheckCircle /> Thanks! Your message has been sent.
-              </p>
-            )}
             <button
               type="submit"
-              disabled={status === 'sending'}
-              className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-70"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
             >
-              <FiSend /> {status === 'sending' ? 'Sending…' : 'Send Message'}
+              <FiSend /> Send Message
             </button>
           </form>
 
