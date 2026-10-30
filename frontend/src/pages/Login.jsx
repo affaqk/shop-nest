@@ -1,12 +1,17 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import AuthLayout, { authInputClass } from '../components/AuthLayout'
-import axios from 'axios'
+import { useAuth } from '../context/auth'
+import { getErrorMessage } from '../api'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [user, setUser] = useState({
     email : "",
     password : ""
@@ -21,15 +26,16 @@ const Login = () => {
 
   const submitForm = async (e) => {
     e.preventDefault()
+    setLoading(true)
+    setError("")
     try {
-      await axios.post("http://localhost:8000/api/user/login", user, {
-        withCredentials : true
-      });
-      console.log("User loggedin successfully")
-      alert("User loggedin successfully")
-      navigate("/")
+      const loggedIn = await login(user)
+      // Admins land on the dashboard; everyone else goes back where they came from
+      navigate(loggedIn.role === "admin" ? "/admin" : location.state?.from || "/")
     } catch (error) {
-      console.log(error)
+      setError(getErrorMessage(error))
+    } finally {
+      setLoading(false)
     }
   }
   return (
@@ -46,6 +52,7 @@ const Login = () => {
       }
     >
       <form className="space-y-5" onSubmit={submitForm}>
+        {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span>
           <div className="relative">
@@ -56,7 +63,7 @@ const Login = () => {
         <label className="block">
           <span className="mb-1.5 flex justify-between text-sm font-medium text-slate-700">
             Password
-            <a href="#" className="font-medium text-blue-600 hover:underline">Forgot password?</a>
+            <Link to="/forgot-password" className="font-medium text-blue-600 hover:underline">Forgot password?</Link>
           </span>
           <div className="relative">
             <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -83,9 +90,10 @@ const Login = () => {
         </label>
         <button
           type="submit"
-          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+          disabled={loading}
+          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
         >
-          Sign In
+          {loading ? 'Signing In...' : 'Sign In'}
         </button>
       </form>
     </AuthLayout>

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { FiFilter, FiX, FiSearch } from 'react-icons/fi'
 import PageHeader from '../components/PageHeader'
 import ProductCard from '../components/ProductCard'
-import { categories, products } from '../data/mockData'
+import { ProductGridSkeleton } from '../components/Skeletons'
+import { getAllProducts, getErrorMessage } from '../api'
 
 const sortOptions = [
   { value: '', label: 'Featured' },
@@ -18,6 +19,16 @@ const MAX_PRICE = 300
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [allProducts, setAllProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    getAllProducts()
+      .then(setAllProducts)
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false))
+  }, [])
 
   const category = searchParams.get('category') || ''
   const search = searchParams.get('search') || ''
@@ -32,6 +43,28 @@ const Shop = () => {
   }
 
   const clearFilters = () => setSearchParams({})
+
+  // Categories come from the products themselves
+  const categories = [...new Set(allProducts.map((p) => p.category))].sort().map((cat) => ({
+    id: cat,
+    name: cat.charAt(0).toUpperCase() + cat.slice(1),
+    count: allProducts.filter((p) => p.category === cat).length,
+  }))
+
+  const sorters = {
+    newest: (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    'price-asc': (a, b) => a.price - b.price,
+    'price-desc': (a, b) => b.price - a.price,
+    rating: (a, b) => (b.rating || 0) - (a.rating || 0),
+  }
+
+  const products = allProducts.filter(
+    (p) =>
+      (!category || p.category === category) &&
+      (!search || p.title.toLowerCase().includes(search.toLowerCase())) &&
+      (maxPrice >= MAX_PRICE || p.price <= maxPrice)
+  )
+  if (sorters[sort]) products.sort(sorters[sort])
 
   const activeCategory = categories.find((c) => c.id === category)
   const hasFilters = category || search || maxPrice < MAX_PRICE
@@ -178,10 +211,14 @@ const Shop = () => {
             </div>
           )}
 
-          {products.length ? (
+          {error && <p className="mb-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{error}</p>}
+
+          {loading ? (
+            <ProductGridSkeleton />
+          ) : products.length ? (
             <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product._id} product={product} />
               ))}
             </div>
           ) : (

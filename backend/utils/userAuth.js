@@ -19,6 +19,14 @@ export const isAuthenticated = async (req, res, next) => {
     }
 }
 
+// Lets a user act only on their own account (/:id), unless they are an admin
+export const isSelfOrAdmin = (req, res, next) => {
+    if(req.user.role !== "admin" && req.user._id.toString() !== req.params.id){
+        return res.status(403).json({message: "You are not allowed to access this route"});
+    }
+    next()
+}
+
 export const isAdmin = (...roles) => {
     return async (req, res, next) => {
         if(!roles.includes(req.user.role)){

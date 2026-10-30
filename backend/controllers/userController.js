@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import User from "../models/userModel.js";
 import { sendToken } from "../utils/jwtToken.js";
 import { sendMail } from "../utils/sendMail.js";
@@ -107,7 +108,7 @@ export const userProfile = async (req, res) => {
 
 export const updateUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, {new : true, runValidators : true});
+        const user = await User.findById(req.params.id);
 
         if(!user){
             return res.status(400).json({
@@ -115,6 +116,20 @@ export const updateUser = async (req, res) => {
                 message : "User not found"
             })
         }
+
+        // Only these fields can be changed; only admins can change a role
+        const allowedFields = ["name", "email", "profile", "password"];
+        if(req.user.role === "admin"){
+            allowedFields.push("role");
+        }
+        for(const field of allowedFields){
+            if(req.body[field] !== undefined){
+                user[field] = req.body[field];
+            }
+        }
+
+        // save() (not findByIdAndUpdate) so the pre-save hook hashes a new password
+        await user.save();
 
         return res.status(200).json({
             success : true,
@@ -166,6 +181,7 @@ export const resetPasswordRequest = async (req, res) => {
         }
 
         const token = user.createResetToken()
+        await user.save({ validateBeforeSave : false })
         const url = `http://localhost:5173/reset-password/${token}`
         const message = `Your password reset link is ${url}`;
 
@@ -193,7 +209,7 @@ export const resetPassword = async (req, res) => {
     try {
         const resetPasswordToken = crypto.createHash("sha256").update(req.params.token).digest("hex");
 
-        const user = await User.find({
+        const user = await User.findOne({
             resetPasswordToken,
             resetPasswordExpire : {$gt : Date.now()}
         })

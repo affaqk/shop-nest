@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import {
   FiSearch,
   FiUser,
@@ -13,8 +13,11 @@ import {
   FiLogOut,
   FiPhone,
   FiMail,
+  FiGrid,
 } from 'react-icons/fi'
 import { FaFacebookF, FaInstagram, FaXTwitter, FaYoutube, FaLinkedinIn } from 'react-icons/fa6'
+import { useAuth } from '../context/auth'
+import Avatar from './Avatar'
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -38,6 +41,13 @@ const Navbar = () => {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, isAdmin, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   // Close menus when the route changes
   const [prevLocation, setPrevLocation] = useState(location)
@@ -143,19 +153,23 @@ const Navbar = () => {
               onClick={() => setProfileOpen(!profileOpen)}
               className="flex items-center gap-2 rounded-full p-1 pr-2 text-slate-700 hover:bg-slate-100"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-                <FiUser className="h-5 w-5" />
-              </span>
+              {user ? (
+                <Avatar user={user} className="h-9 w-9" />
+              ) : (
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                  <FiUser className="h-5 w-5" />
+                </span>
+              )}
               <span className="hidden text-left leading-tight sm:block">
-                <span className="block text-xs text-slate-500">Hello, Guest</span>
+                <span className="block text-xs text-slate-500">Hello, {user ? user.name.split(' ')[0] : 'Guest'}</span>
                 <span className="block text-sm font-semibold">Account</span>
               </span>
               <FiChevronDown className={`hidden h-4 w-4 transition-transform sm:block ${profileOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {profileOpen && (
+            {profileOpen && !user && (
               <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-lg">
-                <div className="border-b border-slate-100 p-4">
+                <div className="p-4">
                   <p className="text-sm font-semibold text-slate-900">Welcome!</p>
                   <p className="text-xs text-slate-500">Sign in to manage your orders</p>
                   <div className="mt-3 flex gap-2">
@@ -167,7 +181,21 @@ const Navbar = () => {
                     </Link>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {profileOpen && user && (
+              <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-lg">
+                <div className="border-b border-slate-100 p-4">
+                  <p className="truncate text-sm font-semibold text-slate-900">{user.name}</p>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                </div>
                 <ul className="py-1 text-sm text-slate-700">
+                  {isAdmin && (
+                    <li>
+                      <Link to="/admin" className="flex items-center gap-3 px-4 py-2 font-semibold text-blue-600 hover:bg-blue-50"><FiGrid /> Admin Dashboard</Link>
+                    </li>
+                  )}
                   <li>
                     <Link to="/profile" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50"><FiUser /> My Profile</Link>
                   </li>
@@ -178,7 +206,7 @@ const Navbar = () => {
                     <Link to="/profile?tab=settings" className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50"><FiSettings /> Settings</Link>
                   </li>
                   <li className="border-t border-slate-100">
-                    <Link to="/login" className="flex items-center gap-3 px-4 py-2 text-rose-600 hover:bg-rose-50"><FiLogOut /> Logout</Link>
+                    <button onClick={handleLogout} className="flex w-full items-center gap-3 px-4 py-2 text-rose-600 hover:bg-rose-50"><FiLogOut /> Logout</button>
                   </li>
                 </ul>
               </div>

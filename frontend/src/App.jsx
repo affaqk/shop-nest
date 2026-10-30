@@ -12,6 +12,13 @@ import Profile from './pages/Profile'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import NotFound from './pages/NotFound'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import ProtectedRoute from './components/ProtectedRoute'
+import AdminLayout from './components/admin/AdminLayout'
+import Dashboard from './pages/admin/Dashboard'
+import AdminProducts from './pages/admin/Products'
+import AdminUsers from './pages/admin/Users'
 
 function App() {
   return (
@@ -25,10 +32,23 @@ function App() {
         <Route path="wishlist" element={<Wishlist />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
-        <Route path="profile" element={<Profile />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password/:token" element={<ResetPassword />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="profile" element={<Profile />} />
+        </Route>
         <Route path="about" element={<About />} />
         <Route path="contact" element={<Contact />} />
         <Route path="*" element={<NotFound />} />
+      </Route>
+
+      {/* Admin dashboard (admins only) */}
+      <Route path="admin" element={<ProtectedRoute adminOnly />}>
+        <Route element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="products" element={<AdminProducts />} />
+          <Route path="users" element={<AdminUsers />} />
+        </Route>
       </Route>
     </Routes>
   )

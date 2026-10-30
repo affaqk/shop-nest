@@ -30,6 +30,15 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    // Never send the password hash or reset token in API responses
+    toJSON: {
+      transform: (doc, ret) => {
+        delete ret.password;
+        delete ret.resetPasswordToken;
+        delete ret.resetPasswordExpire;
+        return ret;
+      },
+    },
   },
 );
 

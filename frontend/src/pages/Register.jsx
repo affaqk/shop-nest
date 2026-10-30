@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import axios from "axios"
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiImage } from 'react-icons/fi'
 import AuthLayout, { authInputClass } from '../components/AuthLayout'
+import { useAuth } from '../context/auth'
+import { getErrorMessage } from '../api'
 
 const Register = () => {
   const navigate = useNavigate()
+  const { register } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const [user, setUser] = useState({
     name : "",
@@ -24,16 +28,15 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("clicked")
+    setLoading(true)
+    setError("")
     try {
-      await axios.post("http://localhost:8000/api/user/register", user, {
-        withCredentials : true
-      })
-      console.log("User registered successfully")
-      alert("User registered successfully")
+      await register(user)
       navigate("/")
     } catch (error) {
-      console.log(error)
+      setError(getErrorMessage(error))
+    } finally {
+      setLoading(false)
     }
   }
   return (
@@ -50,6 +53,7 @@ const Register = () => {
       }
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
+        {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span>
           <div className="relative">
@@ -77,20 +81,6 @@ const Register = () => {
                 placeholder="Min. 8 characters"
                 className={authInputClass}
               />
-            </div>
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-slate-700">Confirm</span>
-            <div className="relative">
-              <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                name="profile"
-                type="text"
-                required
-                placeholder="Profile url..."
-                className={authInputClass}
-                value = {user.profile} onChange = {getValue}
-              />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -99,6 +89,20 @@ const Register = () => {
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
               </button>
+            </div>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-slate-700">Profile image URL</span>
+            <div className="relative">
+              <FiImage className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                name="profile"
+                type="url"
+                required
+                placeholder="https://..."
+                className={authInputClass}
+                value = {user.profile} onChange = {getValue}
+              />
             </div>
           </label>
         </div>
@@ -111,9 +115,10 @@ const Register = () => {
         </label>
         <button
           type="submit"
-          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+          disabled={loading}
+          className="w-full rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
         >
-          Create Account
+          {loading ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
     </AuthLayout>
