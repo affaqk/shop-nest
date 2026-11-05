@@ -18,6 +18,7 @@ import {
 import { FaFacebookF, FaInstagram, FaXTwitter, FaYoutube, FaLinkedinIn } from 'react-icons/fa6'
 import { useAuth } from '../context/auth'
 import { useCart } from '../context/cart'
+import { useWishlist } from '../context/wishlist'
 import Avatar from './Avatar'
 
 const navLinks = [
@@ -45,6 +46,7 @@ const Navbar = () => {
   const navigate = useNavigate()
   const { user, isAdmin, logout } = useAuth()
   const { count: cartCount } = useCart()
+  const { count: wishlistCount } = useWishlist()
 
   const handleLogout = () => {
     logout()
@@ -138,9 +140,11 @@ const Navbar = () => {
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           <Link to="/wishlist" className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100" aria-label="Wishlist">
             <FiHeart className="h-6 w-6" />
-            <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-              2
-            </span>
+            {wishlistCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                {wishlistCount > 99 ? '99+' : wishlistCount}
+              </span>
+            )}
           </Link>
           <Link to="/cart" className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100" aria-label="Cart">
             <FiShoppingCart className="h-6 w-6" />

@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router'
 import {
   FiMinus,
   FiPlus,
-  FiHeart,
   FiShoppingBag,
   FiTruck,
   FiRefreshCw,
@@ -13,6 +12,7 @@ import {
 } from 'react-icons/fi'
 import Rating from '../components/Rating'
 import ProductCard from '../components/ProductCard'
+import WishlistButton from '../components/WishlistButton'
 import SectionHeading from '../components/SectionHeading'
 import { Spinner } from '../components/Skeletons'
 import { categories, gadgets } from '../data/mockData'
@@ -266,12 +266,11 @@ const ProductDetails = () => {
                   This item is not available to order online yet.
                 </p>
               )}
-              <button
-                aria-label="Add to wishlist"
+              <WishlistButton
+                product={product}
+                iconClassName="h-5 w-5"
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-slate-900"
-              >
-                <FiHeart className="h-5 w-5" />
-              </button>
+              />
               <button
                 aria-label="Share"
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-slate-900"

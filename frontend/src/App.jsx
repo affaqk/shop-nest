@@ -29,13 +29,13 @@ function App() {
         <Route path="shop" element={<Shop />} />
         <Route path="product/:id" element={<ProductDetails />} />
         <Route path="cart" element={<Cart />} />
-        <Route path="wishlist" element={<Wishlist />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/:token" element={<ResetPassword />} />
         <Route element={<ProtectedRoute />}>
           <Route path="checkout" element={<Checkout />} />
+          <Route path="wishlist" element={<Wishlist />} />
           <Route path="profile" element={<Profile />} />
         </Route>
         <Route path="about" element={<About />} />

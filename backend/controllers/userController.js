@@ -1,5 +1,7 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import User from "../models/userModel.js";
+import Product from "../models/productModel.js";
 import { sendToken } from "../utils/jwtToken.js";
 import { sendMail } from "../utils/sendMail.js";
 
@@ -241,6 +243,70 @@ export const resetPassword = async (req, res) => {
         return res.status(500).json({
             success : false,
             message : error.message
+        })
+    }
+}
+
+// Wishlist of the logged-in user, as full product objects
+const sendWishlist = async (userId, res, message) => {
+    const user = await User.findById(userId).populate("wishlist");
+    // Products deleted by an admin come back as null, so leave them out
+    const wishlist = user.wishlist.filter(Boolean);
+
+    return res.status(200).json({
+        success : true,
+        message,
+        wishlist
+    })
+}
+
+export const getWishlist = async (req, res) => {
+    try {
+        return await sendWishlist(req.user._id, res, "Wishlist fetched successfully");
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success : false,
+            error
+        })
+    }
+}
+
+export const addToWishlist = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const product = mongoose.isValidObjectId(productId) && await Product.exists({ _id: productId });
+        if(!product){
+            return res.status(400).json({
+                success : false,
+                message : "Product not found"
+            })
+        }
+
+        // $addToSet never adds the same product twice
+        await User.updateOne({ _id: req.user._id }, { $addToSet: { wishlist: productId } });
+        return await sendWishlist(req.user._id, res, "Added to wishlist");
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success : false,
+            error
+        })
+    }
+}
+
+export const removeFromWishlist = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        if(mongoose.isValidObjectId(productId)){
+            await User.updateOne({ _id: req.user._id }, { $pull: { wishlist: productId } });
+        }
+        return await sendWishlist(req.user._id, res, "Removed from wishlist");
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success : false,
+            error
         })
     }
 }

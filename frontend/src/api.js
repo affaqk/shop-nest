@@ -26,6 +26,9 @@ export const updateUser = (id, data) => api.put(`/user/update/${id}`, data).then
 export const deleteUser = (id) => api.delete(`/user/delete/${id}`)
 export const requestPasswordReset = (email) => api.post('/user/reset-password-request', { email }).then((res) => res.data)
 export const resetPassword = (token, data) => api.post(`/user/reset-password/${token}`, data).then((res) => res.data.user)
+export const getWishlist = () => api.get('/user/wishlist').then((res) => res.data.wishlist || [])
+export const addToWishlist = (productId) => api.post(`/user/wishlist/${productId}`).then((res) => res.data.wishlist || [])
+export const removeFromWishlist = (productId) => api.delete(`/user/wishlist/${productId}`).then((res) => res.data.wishlist || [])
 
 // ---------- Orders ----------
 export const createOrder = (data) => api.post('/order/create-order', data).then((res) => res.data.order)

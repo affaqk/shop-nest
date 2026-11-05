@@ -5,6 +5,7 @@ import { FiUser, FiPackage, FiHeart, FiMapPin, FiSettings, FiLogOut, FiEdit2, Fi
 import { user as mockUser } from '../data/mockData'
 import { useAuth } from '../context/auth'
 import { useCart } from '../context/cart'
+import { useWishlist } from '../context/wishlist'
 import { getUserProfile, updateUser, deleteUser, getMyOrders, cancelOrder, getErrorMessage } from '../api'
 import Avatar from '../components/Avatar'
 import OrderStatus from '../components/OrderStatus'
@@ -225,6 +226,7 @@ const Profile = () => {
   const [orders, setOrders] = useState([])
   const [loadingOrders, setLoadingOrders] = useState(true)
   const { count: cartCount } = useCart()
+  const { count: wishlistCount } = useWishlist()
   const location = useLocation()
   const justPlaced = location.state?.placedOrder
 
@@ -321,7 +323,7 @@ const Profile = () => {
                 {[
                   { icon: FiPackage, label: 'Total Orders', value: orders.length, color: 'bg-blue-50 text-blue-600' },
                   { icon: FiDollarSign, label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, color: 'bg-emerald-50 text-emerald-600' },
-                  { icon: FiHeart, label: 'Wishlist', value: 2, color: 'bg-rose-50 text-rose-600' },
+                  { icon: FiHeart, label: 'Wishlist', value: wishlistCount, color: 'bg-rose-50 text-rose-600' },
                   { icon: FiShoppingBag, label: 'In Cart', value: cartCount, color: 'bg-amber-50 text-amber-600' },
                 ].map(({ icon: Icon, label, value, color }) => (
                   <div key={label} className="rounded-3xl bg-white p-6 ring-1 ring-slate-100">

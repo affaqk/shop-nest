@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { FiHeart, FiShoppingBag, FiEye, FiCheck } from 'react-icons/fi'
+import { FiShoppingBag, FiEye, FiCheck } from 'react-icons/fi'
 import Rating from './Rating'
+import WishlistButton from './WishlistButton'
 import { categories } from '../data/mockData'
 import { useCart, isStoreProduct } from '../context/cart'
 
@@ -49,12 +50,10 @@ const ProductCard = ({ product }) => {
         )}
 
         <div className="absolute right-3 top-3 flex flex-col gap-2">
-          <button
-            aria-label="Add to wishlist"
+          <WishlistButton
+            product={product}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm backdrop-blur transition hover:scale-110 hover:text-rose-500"
-          >
-            <FiHeart className="h-4 w-4" />
-          </button>
+          />
           <Link
             to={`/product/${id}`}
             aria-label="Quick view"

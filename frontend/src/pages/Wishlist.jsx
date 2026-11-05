@@ -2,10 +2,11 @@ import { Link } from 'react-router'
 import { FiHeart, FiArrowRight } from 'react-icons/fi'
 import PageHeader from '../components/PageHeader'
 import ProductCard from '../components/ProductCard'
-import { products } from '../data/mockData'
+import { Spinner } from '../components/Skeletons'
+import { useWishlist } from '../context/wishlist'
 
 const Wishlist = () => {
-  const wishlist = products.slice(0, 4)
+  const { items: wishlist, loading } = useWishlist()
 
   return (
     <>
@@ -15,10 +16,12 @@ const Wishlist = () => {
         crumbs={[{ label: 'Wishlist' }]}
       />
       <div className="mx-auto max-w-7xl px-4 py-12">
-        {wishlist.length ? (
+        {loading ? (
+          <Spinner />
+        ) : wishlist.length ? (
           <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
             {wishlist.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product._id} product={product} />
             ))}
           </div>
         ) : (
