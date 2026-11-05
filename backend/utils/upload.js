@@ -1,29 +1,20 @@
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
 import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 
-export const UPLOAD_DIR = path.resolve("uploads");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const allowedTypes = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-};
-
-const storage = multer.diskStorage({
-    destination: UPLOAD_DIR,
-    // Random name so uploads never overwrite each other or use the client's filename
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${allowedTypes[file.mimetype]}`),
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+// Keep the file in memory; it goes straight to Cloudinary and never touches disk
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        if (!allowedTypes[file.mimetype]) {
+        if (!allowedTypes.includes(file.mimetype)) {
             return cb(new Error("Only JPG, PNG, WEBP or GIF images are allowed"));
         }
         cb(null, true);
@@ -41,17 +32,18 @@ export const uploadProductImage = (req, res, next) => {
     });
 };
 
-// Full URL for an uploaded file, e.g. http://localhost:8000/uploads/123-abc.jpg
-export const fileUrl = (req, file) => `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+// Upload a multer file to Cloudinary, resolves to { url, publicId }
+export const uploadToCloudinary = (file) =>
+    new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder: "shopnest/products" }, (error, result) => {
+            if (error) return reject(error);
+            resolve({ url: result.secure_url, publicId: result.public_id });
+        });
+        stream.end(file.buffer);
+    });
 
-// Remove an image from disk if it is one of our uploads (external URLs are left alone)
-export const removeUploadedImage = (url) => {
-    if (!url || !url.includes("/uploads/")) return;
-    const filePath = path.join(UPLOAD_DIR, path.basename(url));
-    fs.promises.unlink(filePath).catch(() => {});
-};
-
-// Clean up a just-uploaded file when the request fails
-export const discardUpload = (req) => {
-    if (req.file) fs.promises.unlink(req.file.path).catch(() => {});
+// Delete an image from Cloudinary (products with an external URL have no publicId)
+export const removeImage = (publicId) => {
+    if (!publicId) return;
+    cloudinary.uploader.destroy(publicId).catch((error) => console.log(error));
 };

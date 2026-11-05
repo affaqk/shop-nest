@@ -7,7 +7,6 @@ import productRouter from './routes/productRoutes.js';
 import userRouter from './routes/userRoutes.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import { UPLOAD_DIR } from './utils/upload.js';
 
 const port = process.env.PORT
 
@@ -26,7 +25,6 @@ app.use(
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use("/uploads", express.static(UPLOAD_DIR))
 app.use("/api/product", productRouter)
 app.use("/api/user", userRouter)
 app.listen(port, ()=>{

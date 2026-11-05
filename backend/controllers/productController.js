@@ -1,7 +1,8 @@
 import Product from "../models/productModel.js";
-import { fileUrl, removeUploadedImage, discardUpload } from "../utils/upload.js";
+import { uploadToCloudinary, removeImage } from "../utils/upload.js";
 
 export const createProduct = async (req, res) => {
+    let uploaded;
     try {
         const { title, description, price, category } = req.body;
         if(!req.file){
@@ -10,8 +11,8 @@ export const createProduct = async (req, res) => {
                 message : "Product image is required"
             })
         }
-        const image = fileUrl(req, req.file);
-        const product = await Product.create({ title, description, price, category, image });
+        uploaded = await uploadToCloudinary(req.file);
+        const product = await Product.create({ title, description, price, category, image: uploaded.url, imagePublicId: uploaded.publicId });
 
         if(!product){
             return res.status(400).json({
@@ -26,7 +27,7 @@ export const createProduct = async (req, res) => {
             product
         })
     } catch (error) {
-        discardUpload(req)
+        removeImage(uploaded?.publicId)
         console.log(error)
         return res.status(500).json({
             success : false,
@@ -60,18 +61,18 @@ export const getAllProducts = async (req, res) => {
 }
 
 export const updateProduct = async (req, res) => {
+    let uploaded;
     try {
         const product = await Product.findById(req.params.id);
 
         if(!product){
-            discardUpload(req)
             return res.status(400).json({
                 success : false,
                 message : "No product found"
             })
         }
 
-        const oldImage = product.image;
+        const oldPublicId = product.imagePublicId;
         for(const field of ["title", "description", "price", "category"]){
             if(req.body[field] !== undefined){
                 product[field] = req.body[field];
@@ -79,12 +80,14 @@ export const updateProduct = async (req, res) => {
         }
         // A new file replaces the image; otherwise the current one is kept
         if(req.file){
-            product.image = fileUrl(req, req.file);
+            uploaded = await uploadToCloudinary(req.file);
+            product.image = uploaded.url;
+            product.imagePublicId = uploaded.publicId;
         }
         await product.save();
 
-        if(req.file){
-            removeUploadedImage(oldImage)
+        if(uploaded){
+            removeImage(oldPublicId)
         }
 
         return res.status(200).json({
@@ -93,7 +96,7 @@ export const updateProduct = async (req, res) => {
             product
         })
     } catch(error){
-        discardUpload(req)
+        removeImage(uploaded?.publicId)
         console.log(error)
         return res.status(500).json({
             success : false,
@@ -113,7 +116,7 @@ export const deleteProduct = async (req, res) => {
             })
         }
 
-        removeUploadedImage(product.image)
+        removeImage(product.imagePublicId)
 
         return res.status(200).json({
             success : true,
