@@ -1,16 +1,19 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { FiUser, FiPackage, FiHeart, FiMapPin, FiSettings, FiLogOut, FiEdit2, FiShoppingBag, FiDollarSign, FiGrid } from 'react-icons/fi'
-// Addresses have no backend API yet, so they still come from mock data
 import { user as mockUser } from '../data/mockData'
 import { useAuth } from '../context/auth'
 import { useCart } from '../context/cart'
 import { useWishlist } from '../context/wishlist'
-import { getUserProfile, updateUser, deleteUser, getMyOrders, cancelOrder, getErrorMessage } from '../api'
+import { getUserProfile, updateUser, deleteUser, getMyOrders, cancelOrder, getAddresses, addAddress, updateAddress, deleteAddress, getErrorMessage } from '../api'
 import Avatar from '../components/Avatar'
 import OrderStatus from '../components/OrderStatus'
 import OrderDetails from '../components/OrderDetails'
+import AddressForm from '../components/AddressForm'
+import Modal from '../components/admin/Modal'
+import ConfirmDialog from '../components/admin/ConfirmDialog'
 import { orderNumber, itemCount } from '../orders'
+import { countryName, emptyAddress, MAX_ADDRESSES } from '../addresses'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FiUser },
@@ -126,6 +129,111 @@ const OrdersTable = ({ orders, loading, onCancelled }) => {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+const AddressesTab = ({ user }) => {
+  const [addresses, setAddresses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  // editing: null = closed, {} = new address, address object = edit
+  const [editing, setEditing] = useState(null)
+  const [deleting, setDeleting] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    getAddresses()
+      .then(setAddresses)
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Every change returns the full, updated list from the server
+  const run = async (request, done) => {
+    setBusy(true)
+    setError('')
+    try {
+      setAddresses(await request())
+      done()
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSave = (data) =>
+    run(() => (editing._id ? updateAddress(editing._id, data) : addAddress(data)), () => setEditing(null))
+
+  return (
+    <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="font-display text-3xl font-semibold text-slate-900">Addresses</h1>
+        {addresses.length < MAX_ADDRESSES && (
+          <button onClick={() => setEditing({})} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600">
+            + Add New
+          </button>
+        )}
+      </div>
+      {error && <p className="mb-6 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+      {addresses.length ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {addresses.map((a) => (
+            <div key={a._id} className={`relative rounded-2xl border-2 p-6 ${a.isDefault ? 'border-blue-600' : 'border-slate-200'}`}>
+              {a.isDefault && (
+                <span className="absolute right-4 top-4 rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">Default</span>
+              )}
+              <p className="font-semibold text-slate-900">{a.label || 'Address'}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                {a.firstName} {a.lastName}
+                <br />
+                {a.address}
+                <br />
+                {a.city}, {a.state} {a.zip}
+                <br />
+                {countryName(a.country)}
+                <br />
+                {a.phone}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
+                <button onClick={() => setEditing(a)} className="flex items-center gap-1.5 text-blue-600 hover:underline">
+                  <FiEdit2 className="h-3.5 w-3.5" /> Edit
+                </button>
+                {!a.isDefault && (
+                  <button onClick={() => run(() => updateAddress(a._id, { isDefault: true }), () => {})} disabled={busy} className="text-slate-600 hover:underline">
+                    Set as default
+                  </button>
+                )}
+                <button onClick={() => setDeleting(a)} className="text-rose-600 hover:underline">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="py-8 text-center text-sm text-slate-500">{loading ? 'Loading addresses...' : 'No saved addresses yet. Add one to check out faster.'}</p>
+      )}
+
+      {editing && (
+        <Modal title={editing._id ? 'Edit Address' : 'Add Address'} onClose={() => setEditing(null)}>
+          <AddressForm
+            address={editing._id ? editing : { ...emptyAddress(user), label: addresses.length ? '' : 'Home' }}
+            onSubmit={handleSave}
+            onCancel={() => setEditing(null)}
+            saving={busy}
+          />
+        </Modal>
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title="Delete address?"
+          message={`"${deleting.label || 'This address'}" will be removed from your account.`}
+          onConfirm={() => run(() => deleteAddress(deleting._id), () => setDeleting(null))}
+          onCancel={() => setDeleting(null)}
+          busy={busy}
+        />
+      )}
     </div>
   )
 }
@@ -359,34 +467,7 @@ const Profile = () => {
             </div>
           )}
 
-          {activeTab === 'addresses' && (
-            <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-8">
-              <div className="mb-6 flex items-center justify-between">
-                <h1 className="font-display text-3xl font-semibold text-slate-900">Addresses</h1>
-                <button className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600">
-                  + Add New
-                </button>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="relative rounded-2xl border-2 border-blue-600 p-6">
-                  <span className="absolute right-4 top-4 rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">
-                    Default
-                  </span>
-                  <p className="font-semibold text-slate-900">Home</p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                    {user.name}
-                    <br />
-                    {mockUser.address}
-                    <br />
-                    {mockUser.phone}
-                  </p>
-                  <button className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:underline">
-                    <FiEdit2 className="h-3.5 w-3.5" /> Edit
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === 'addresses' && <AddressesTab user={user} />}
 
           {activeTab === 'settings' && <SettingsForm key={user.updatedAt ? 'fetched' : 'cached'} user={user} onSaved={handleSaved} onDelete={handleDeleted} />}
         </div>

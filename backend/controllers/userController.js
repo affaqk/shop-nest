@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import mongoose from "mongoose";
-import User from "../models/userModel.js";
+import User, { ADDRESS_FIELDS, MAX_ADDRESSES } from "../models/userModel.js";
 import Product from "../models/productModel.js";
 import { sendToken } from "../utils/jwtToken.js";
 import { sendMail } from "../utils/sendMail.js";
@@ -308,5 +308,121 @@ export const removeFromWishlist = async (req, res) => {
             success : false,
             error
         })
+    }
+}
+
+
+// ---------- Saved addresses (always the logged-in user's own) ----------
+
+// Copy only the known address fields from the request body
+const pickAddress = (body = {}) => Object.fromEntries(ADDRESS_FIELDS.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]));
+
+// Exactly one address is the default whenever the user has any
+const setDefault = (user, address) => {
+    user.addresses.forEach((a) => { a.isDefault = a._id.equals(address._id); });
+}
+
+const addressError = (error, res) => {
+    console.log(error)
+    if(error.name === "ValidationError" || error.name === "ValidatorError"){
+        return res.status(400).json({
+            success : false,
+            message : "Please fill in all address fields"
+        })
+    }
+    return res.status(500).json({
+        success : false,
+        error
+    })
+}
+
+export const getAddresses = async (req, res) => {
+    return res.status(200).json({
+        success : true,
+        addresses : req.user.addresses
+    })
+}
+
+export const addAddress = async (req, res) => {
+    try {
+        const user = req.user;
+        if(user.addresses.length >= MAX_ADDRESSES){
+            return res.status(400).json({
+                success : false,
+                message : `You can save up to ${MAX_ADDRESSES} addresses`
+            })
+        }
+
+        const address = user.addresses.create(pickAddress(req.body));
+        // Validate before adding, so a bad address never ends up on the user
+        await address.validate();
+        user.addresses.push(address);
+        if(req.body.isDefault || user.addresses.length === 1){
+            setDefault(user, address);
+        }
+        await user.save();
+
+        return res.status(201).json({
+            success : true,
+            message : "Address saved",
+            addresses : user.addresses
+        })
+    } catch (error) {
+        return addressError(error, res);
+    }
+}
+
+export const updateAddress = async (req, res) => {
+    try {
+        const user = req.user;
+        const address = user.addresses.id(req.params.addressId);
+        if(!address){
+            return res.status(400).json({
+                success : false,
+                message : "Address not found"
+            })
+        }
+
+        address.set(pickAddress(req.body));
+        if(req.body.isDefault){
+            setDefault(user, address);
+        }
+        await user.save();
+
+        return res.status(200).json({
+            success : true,
+            message : "Address updated",
+            addresses : user.addresses
+        })
+    } catch (error) {
+        return addressError(error, res);
+    }
+}
+
+export const deleteAddress = async (req, res) => {
+    try {
+        const user = req.user;
+        const address = user.addresses.id(req.params.addressId);
+        if(!address){
+            return res.status(400).json({
+                success : false,
+                message : "Address not found"
+            })
+        }
+
+        const wasDefault = address.isDefault;
+        address.deleteOne();
+        if(wasDefault && user.addresses.length){
+            setDefault(user, user.addresses[0]);
+        }
+        await user.save();
+
+        return res.status(200).json({
+            success : true,
+            message : "Address deleted",
+            addresses : user.addresses
+        })
+    } catch (error) {
+        return addressError(error, res);
     }
 }

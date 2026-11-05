@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
-import { FiCreditCard, FiLock, FiTruck, FiDollarSign } from 'react-icons/fi'
+import { FiCreditCard, FiLock, FiTruck, FiDollarSign, FiPlus } from 'react-icons/fi'
 import { FaPaypal } from 'react-icons/fa6'
 import PageHeader from '../components/PageHeader'
 import OrderSummary from '../components/OrderSummary'
 import { useCart } from '../context/cart'
 import { useAuth } from '../context/auth'
-import { createOrder, getErrorMessage } from '../api'
+import { createOrder, getAddresses, addAddress, getErrorMessage } from '../api'
+import { COUNTRIES, MAX_ADDRESSES, countryName, emptyAddress } from '../addresses'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
@@ -33,9 +34,23 @@ const Checkout = () => {
   const { items, totals, clearCart } = useCart()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [firstName, ...rest] = (user?.name || '').split(' ')
+  const [saved, setSaved] = useState([])
+  // Saved address id, or 'new'; until the customer picks, the default address is used
+  const [picked, setPicked] = useState(null)
+  const [saveNew, setSaveNew] = useState(true)
+
+  useEffect(() => {
+    getAddresses()
+      .then(setSaved)
+      .catch(() => {}) // Saved addresses are optional; the form still works without them
+  }, [])
 
   if (!items.length) return <Navigate to="/cart" replace />
+
+  const chosenId = picked || saved.find((a) => a.isDefault)?._id || 'new'
+  const chosen = saved.find((a) => a._id === chosenId)
+  // Prefill for the fields below; the `key` on them re-renders the inputs when the choice changes
+  const prefill = chosen || emptyAddress(user)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -50,6 +65,10 @@ const Checkout = () => {
         shippingAddress,
         paymentMethod: payment,
       })
+      if (!chosen && saveNew && saved.length < MAX_ADDRESSES) {
+        // The order is already placed, so a failed save shouldn't show an error (the server ignores `email`)
+        addAddress({ ...shippingAddress, label: saved.length ? `Address ${saved.length + 1}` : 'Home' }).catch(() => {})
+      }
       navigate('/profile?tab=orders', { replace: true, state: { placedOrder: order._id } })
       clearCart()
     } catch (err) {
@@ -71,7 +90,7 @@ const Checkout = () => {
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field label="Email" name="email" type="email" required defaultValue={user?.email} placeholder="you@example.com" />
-              <Field label="Phone" name="phone" type="tel" required placeholder="+1 (555) 000-0000" />
+              <Field key={chosenId} label="Phone" name="phone" type="tel" required defaultValue={prefill.phone} placeholder="+1 (555) 000-0000" />
             </div>
           </section>
 
@@ -80,24 +99,58 @@ const Checkout = () => {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-sans text-sm text-white">2</span>
               Shipping Address
             </h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field label="First Name" name="firstName" required defaultValue={firstName} />
-              <Field label="Last Name" name="lastName" required defaultValue={rest.join(' ')} />
-              <Field label="Street Address" name="address" required className="sm:col-span-2" />
-              <Field label="City" name="city" required />
-              <Field label="State / Province" name="state" required />
-              <Field label="ZIP / Postal Code" name="zip" required />
+            {saved.length > 0 && (
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {saved.map((a) => (
+                  <button
+                    type="button"
+                    key={a._id}
+                    onClick={() => setPicked(a._id)}
+                    className={`rounded-2xl border-2 p-4 text-left text-sm transition ${
+                      chosenId === a._id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="font-semibold text-slate-900">
+                      {a.label || 'Address'} {a.isDefault && <span className="text-xs font-normal text-slate-500">(default)</span>}
+                    </span>
+                    <span className="mt-1 block text-slate-500">
+                      {a.firstName} {a.lastName}, {a.address}, {a.city}, {countryName(a.country)}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPicked('new')}
+                  className={`flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-4 text-sm font-semibold transition ${
+                    chosenId === 'new' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-300 text-slate-600 hover:border-slate-400'
+                  }`}
+                >
+                  <FiPlus /> Use a new address
+                </button>
+              </div>
+            )}
+            <div key={chosenId} className="mt-6 grid gap-4 sm:grid-cols-2">
+              <Field label="First Name" name="firstName" required defaultValue={prefill.firstName} />
+              <Field label="Last Name" name="lastName" required defaultValue={prefill.lastName} />
+              <Field label="Street Address" name="address" required defaultValue={prefill.address} className="sm:col-span-2" />
+              <Field label="City" name="city" required defaultValue={prefill.city} />
+              <Field label="State / Province" name="state" required defaultValue={prefill.state} />
+              <Field label="ZIP / Postal Code" name="zip" required defaultValue={prefill.zip} />
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">Country</span>
-                <select name="country" className={inputClass} defaultValue="US">
-                  <option value="US">United States</option>
-                  <option value="CA">Canada</option>
-                  <option value="GB">United Kingdom</option>
-                  <option value="PK">Pakistan</option>
-                  <option value="AE">United Arab Emirates</option>
+                <select name="country" className={inputClass} defaultValue={prefill.country}>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
                 </select>
               </label>
             </div>
+            {!chosen && saved.length < MAX_ADDRESSES && (
+              <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={saveNew} onChange={(e) => setSaveNew(e.target.checked)} className="h-4 w-4 accent-blue-600" />
+                Save this address to my account
+              </label>
+            )}
           </section>
 
           <section className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-8">

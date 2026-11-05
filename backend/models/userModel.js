@@ -3,6 +3,22 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
+export const ADDRESS_FIELDS = ["label", "firstName", "lastName", "phone", "address", "city", "state", "zip", "country"];
+export const MAX_ADDRESSES = 10;
+
+const addressSchema = new mongoose.Schema({
+  label: { type: String, default: "Home", trim: true },
+  firstName: { type: String, required: true, trim: true },
+  lastName: { type: String, required: true, trim: true },
+  phone: { type: String, required: true, trim: true },
+  address: { type: String, required: true, trim: true },
+  city: { type: String, required: true, trim: true },
+  state: { type: String, required: true, trim: true },
+  zip: { type: String, required: true, trim: true },
+  country: { type: String, required: true, trim: true },
+  isDefault: { type: Boolean, default: false },
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -31,6 +47,7 @@ const userSchema = new mongoose.Schema(
         ref: "Product",
       },
     ],
+    addresses: [addressSchema],
     resetPasswordToken : String,
     resetPasswordExpire : Date
   },

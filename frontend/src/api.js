@@ -29,6 +29,10 @@ export const resetPassword = (token, data) => api.post(`/user/reset-password/${t
 export const getWishlist = () => api.get('/user/wishlist').then((res) => res.data.wishlist || [])
 export const addToWishlist = (productId) => api.post(`/user/wishlist/${productId}`).then((res) => res.data.wishlist || [])
 export const removeFromWishlist = (productId) => api.delete(`/user/wishlist/${productId}`).then((res) => res.data.wishlist || [])
+export const getAddresses = () => api.get('/user/addresses').then((res) => res.data.addresses || [])
+export const addAddress = (data) => api.post('/user/addresses', data).then((res) => res.data.addresses || [])
+export const updateAddress = (id, data) => api.put(`/user/addresses/${id}`, data).then((res) => res.data.addresses || [])
+export const deleteAddress = (id) => api.delete(`/user/addresses/${id}`).then((res) => res.data.addresses || [])
 
 // ---------- Orders ----------
 export const createOrder = (data) => api.post('/order/create-order', data).then((res) => res.data.order)
