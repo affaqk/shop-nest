@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import {
   FiMinus,
   FiPlus,
@@ -17,6 +17,7 @@ import SectionHeading from '../components/SectionHeading'
 import { Spinner } from '../components/Skeletons'
 import { categories, gadgets } from '../data/mockData'
 import axios from 'axios'
+import { useCart, isStoreProduct } from '../context/cart'
 
 const API_URL = 'http://localhost:8000/api/product'
 
@@ -27,6 +28,9 @@ const ProductDetails = () => {
   const [current, setCurrent] = useState({ image: 0, color: 0, size: null, quantity: 1 })
   const [activeTab, setActiveTab] = useState('description')
   const select = (changes) => setCurrent({ ...current, ...changes })
+  const { addItem } = useCart()
+  const navigate = useNavigate()
+  const [added, setAdded] = useState(false)
 
   useEffect(() => {
     let ignore = false
@@ -235,16 +239,33 @@ const ProductDetails = () => {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
-              >
-                <FiShoppingBag /> Add to Cart
-              </button>
-              <button
-                className="flex-1 rounded-full border-2 border-slate-900 px-8 py-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
-              >
-                Buy Now
-              </button>
+              {isStoreProduct(product) ? (
+                <>
+                  <button
+                    onClick={() => {
+                      addItem(product, current.quantity)
+                      setAdded(true)
+                      setTimeout(() => setAdded(false), 1500)
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    <FiShoppingBag /> {added ? 'Added to Cart' : 'Add to Cart'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      addItem(product, current.quantity)
+                      navigate('/checkout')
+                    }}
+                    className="flex-1 rounded-full border-2 border-slate-900 px-8 py-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
+                  >
+                    Buy Now
+                  </button>
+                </>
+              ) : (
+                <p className="flex flex-1 items-center rounded-full bg-slate-100 px-6 py-4 text-sm text-slate-500">
+                  This item is not available to order online yet.
+                </p>
+              )}
               <button
                 aria-label="Add to wishlist"
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition hover:border-slate-900"

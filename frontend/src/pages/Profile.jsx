@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Fragment, useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { FiUser, FiPackage, FiHeart, FiMapPin, FiSettings, FiLogOut, FiEdit2, FiShoppingBag, FiDollarSign, FiGrid } from 'react-icons/fi'
-// Orders and addresses have no backend API yet, so they still come from mock data
-import { orders, user as mockUser } from '../data/mockData'
+// Addresses have no backend API yet, so they still come from mock data
+import { user as mockUser } from '../data/mockData'
 import { useAuth } from '../context/auth'
-import { getUserProfile, updateUser, deleteUser, getErrorMessage } from '../api'
+import { useCart } from '../context/cart'
+import { getUserProfile, updateUser, deleteUser, getMyOrders, getErrorMessage } from '../api'
 import Avatar from '../components/Avatar'
+import OrderStatus from '../components/OrderStatus'
+import OrderDetails from '../components/OrderDetails'
+import { orderNumber, itemCount } from '../orders'
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: FiUser },
@@ -14,50 +18,66 @@ const tabs = [
   { id: 'settings', label: 'Settings', icon: FiSettings },
 ]
 
-const statusStyles = {
-  Delivered: 'bg-emerald-50 text-emerald-700',
-  Shipped: 'bg-blue-50 text-blue-700',
-  Processing: 'bg-amber-50 text-amber-700',
-  Cancelled: 'bg-rose-50 text-rose-700',
-}
-
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
 
-const OrdersTable = ({ orders }) => (
-  <div className="overflow-x-auto">
-    <table className="w-full min-w-[36rem] text-left text-sm">
-      <thead className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
-        <tr>
-          <th className="pb-3 font-semibold">Order</th>
-          <th className="pb-3 font-semibold">Date</th>
-          <th className="pb-3 font-semibold">Items</th>
-          <th className="pb-3 font-semibold">Total</th>
-          <th className="pb-3 font-semibold">Status</th>
-          <th className="pb-3" />
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-100">
-        {orders.map((order) => (
-          <tr key={order.id}>
-            <td className="py-4 font-semibold text-slate-900">{order.id}</td>
-            <td className="py-4 text-slate-500">
-              {new Date(order.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </td>
-            <td className="py-4 text-slate-500">{order.items}</td>
-            <td className="py-4 font-semibold text-slate-900">${order.total.toFixed(2)}</td>
-            <td className="py-4">
-              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[order.status]}`}>{order.status}</span>
-            </td>
-            <td className="py-4 text-right">
-              <button className="text-sm font-semibold text-blue-600 hover:underline">View</button>
-            </td>
+const OrdersTable = ({ orders, loading }) => {
+  const [open, setOpen] = useState(null)
+
+  if (!orders.length) {
+    return (
+      <p className="py-8 text-center text-sm text-slate-500">
+        {loading ? 'Loading orders...' : <>No orders yet. <Link to="/shop" className="font-semibold text-blue-600 hover:underline">Start shopping</Link></>}
+      </p>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[36rem] text-left text-sm">
+        <thead className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+          <tr>
+            <th className="pb-3 font-semibold">Order</th>
+            <th className="pb-3 font-semibold">Date</th>
+            <th className="pb-3 font-semibold">Items</th>
+            <th className="pb-3 font-semibold">Total</th>
+            <th className="pb-3 font-semibold">Status</th>
+            <th className="pb-3" />
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-)
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {orders.map((order) => (
+            <Fragment key={order._id}>
+              <tr>
+                <td className="py-4 font-semibold text-slate-900">{orderNumber(order)}</td>
+                <td className="py-4 text-slate-500">
+                  {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </td>
+                <td className="py-4 text-slate-500">{itemCount(order)}</td>
+                <td className="py-4 font-semibold text-slate-900">${order.totalPrice.toFixed(2)}</td>
+                <td className="py-4">
+                  <OrderStatus status={order.status} />
+                </td>
+                <td className="py-4 text-right">
+                  <button onClick={() => setOpen(open === order._id ? null : order._id)} className="text-sm font-semibold text-blue-600 hover:underline">
+                    {open === order._id ? 'Hide' : 'View'}
+                  </button>
+                </td>
+              </tr>
+              {open === order._id && (
+                <tr>
+                  <td colSpan={6} className="pb-6">
+                    <OrderDetails order={order} />
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 const SettingsForm = ({ user, onSaved, onDelete }) => {
   const [form, setForm] = useState({ name: user.name, email: user.email, profile: user.profile })
@@ -152,6 +172,20 @@ const Profile = () => {
   const { user: authUser, isAdmin, setUser, logout } = useAuth()
   const [user, setProfile] = useState(authUser)
   const [error, setError] = useState('')
+  const [orders, setOrders] = useState([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const { count: cartCount } = useCart()
+  const location = useLocation()
+  const justPlaced = location.state?.placedOrder
+
+  useEffect(() => {
+    getMyOrders()
+      .then(setOrders)
+      .catch((err) => setError(getErrorMessage(err)))
+      .finally(() => setLoadingOrders(false))
+  }, [])
+
+  const totalSpent = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.totalPrice, 0)
 
   // Fetch the latest profile from the API
   useEffect(() => {
@@ -234,9 +268,9 @@ const Profile = () => {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   { icon: FiPackage, label: 'Total Orders', value: orders.length, color: 'bg-blue-50 text-blue-600' },
-                  { icon: FiDollarSign, label: 'Total Spent', value: '$676.99', color: 'bg-emerald-50 text-emerald-600' },
+                  { icon: FiDollarSign, label: 'Total Spent', value: `$${totalSpent.toFixed(2)}`, color: 'bg-emerald-50 text-emerald-600' },
                   { icon: FiHeart, label: 'Wishlist', value: 2, color: 'bg-rose-50 text-rose-600' },
-                  { icon: FiShoppingBag, label: 'In Cart', value: 3, color: 'bg-amber-50 text-amber-600' },
+                  { icon: FiShoppingBag, label: 'In Cart', value: cartCount, color: 'bg-amber-50 text-amber-600' },
                 ].map(({ icon: Icon, label, value, color }) => (
                   <div key={label} className="rounded-3xl bg-white p-6 ring-1 ring-slate-100">
                     <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${color}`}>
@@ -254,7 +288,7 @@ const Profile = () => {
                     View all
                   </button>
                 </div>
-                <OrdersTable orders={orders.slice(0, 3)} />
+                <OrdersTable orders={orders.slice(0, 3)} loading={loadingOrders} />
               </div>
             </>
           )}
@@ -262,7 +296,12 @@ const Profile = () => {
           {activeTab === 'orders' && (
             <div className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-8">
               <h1 className="mb-6 font-display text-3xl font-semibold text-slate-900">My Orders</h1>
-              <OrdersTable orders={orders} />
+              {justPlaced && (
+                <p className="mb-6 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
+                  🎉 Thank you! Your order has been placed and is now being processed.
+                </p>
+              )}
+              <OrdersTable orders={orders} loading={loadingOrders} />
             </div>
           )}
 

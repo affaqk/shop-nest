@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { FiBox, FiUsers, FiTag, FiDollarSign, FiArrowRight } from 'react-icons/fi'
-import { getAllProducts, getAllUsers, getErrorMessage } from '../../api'
+import { FiBox, FiUsers, FiShoppingBag, FiDollarSign, FiArrowRight } from 'react-icons/fi'
+import { getAllProducts, getAllUsers, getAllOrders, getErrorMessage } from '../../api'
 import { useAuth } from '../../context/auth'
 import Avatar from '../../components/Avatar'
+import OrderStatus from '../../components/OrderStatus'
 import { formatDate } from '../../components/admin/styles'
+import { orderNumber } from '../../orders'
 
 const byNewest = (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
 
@@ -12,14 +14,16 @@ const Dashboard = () => {
   const { user } = useAuth()
   const [products, setProducts] = useState([])
   const [users, setUsers] = useState([])
+  const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([getAllProducts(), getAllUsers()])
-      .then(([productList, userList]) => {
+    Promise.all([getAllProducts(), getAllUsers(), getAllOrders()])
+      .then(([productList, userList, orderList]) => {
         setProducts(productList)
         setUsers(userList)
+        setOrders(orderList)
       })
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false))
@@ -31,13 +35,13 @@ const Dashboard = () => {
   ).sort((a, b) => b[1] - a[1])
   const maxCount = categoryCounts[0]?.[1] || 1
 
-  const avgPrice = products.length ? products.reduce((sum, p) => sum + Number(p.price), 0) / products.length : 0
+  const revenue = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.totalPrice, 0)
 
   const stats = [
+    { icon: FiDollarSign, label: 'Revenue', value: `$${revenue.toFixed(2)}`, color: 'bg-rose-50 text-rose-600' },
+    { icon: FiShoppingBag, label: 'Total Orders', value: orders.length, color: 'bg-amber-50 text-amber-600' },
     { icon: FiBox, label: 'Total Products', value: products.length, color: 'bg-blue-50 text-blue-600' },
     { icon: FiUsers, label: 'Total Users', value: users.length, color: 'bg-emerald-50 text-emerald-600' },
-    { icon: FiTag, label: 'Categories', value: categoryCounts.length, color: 'bg-amber-50 text-amber-600' },
-    { icon: FiDollarSign, label: 'Avg. Price', value: `$${avgPrice.toFixed(2)}`, color: 'bg-rose-50 text-rose-600' },
   ]
 
   return (
@@ -60,6 +64,31 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* Recent orders (the API already returns newest first) */}
+      <section className="rounded-3xl bg-white p-6 ring-1 ring-slate-100">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-display text-xl font-semibold text-slate-900">Recent Orders</h2>
+          <Link to="/admin/orders" className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:underline">
+            View all <FiArrowRight />
+          </Link>
+        </div>
+        {orders.length ? (
+          <ul className="divide-y divide-slate-100">
+            {orders.slice(0, 5).map((o) => (
+              <li key={o._id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 text-sm">
+                <span className="w-24 font-semibold text-slate-900">{orderNumber(o)}</span>
+                <span className="min-w-0 flex-1 truncate text-slate-600">{o.user?.name || `${o.shippingAddress.firstName} ${o.shippingAddress.lastName}`}</span>
+                <span className="text-xs text-slate-400">{formatDate(o.createdAt)}</span>
+                <span className="w-20 text-right font-semibold text-slate-900">${o.totalPrice.toFixed(2)}</span>
+                <OrderStatus status={o.status} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-500">{loading ? 'Loading...' : 'No orders yet.'}</p>
+        )}
+      </section>
 
       <div className="grid gap-8 xl:grid-cols-2">
         {/* Products by category */}

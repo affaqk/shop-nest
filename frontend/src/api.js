@@ -27,4 +27,12 @@ export const deleteUser = (id) => api.delete(`/user/delete/${id}`)
 export const requestPasswordReset = (email) => api.post('/user/reset-password-request', { email }).then((res) => res.data)
 export const resetPassword = (token, data) => api.post(`/user/reset-password/${token}`, data).then((res) => res.data.user)
 
+// ---------- Orders ----------
+export const createOrder = (data) => api.post('/order/create-order', data).then((res) => res.data.order)
+export const getMyOrders = () => api.get('/order/my-orders').then((res) => res.data.orders || [])
+export const getAllOrders = () => api.get('/order/all').then((res) => res.data.orders || [])
+export const getOrder = (id) => api.get(`/order/order-detail/${id}`).then((res) => res.data.order)
+export const updateOrderStatus = (id, status) => api.put(`/order/update-status/${id}`, { status }).then((res) => res.data.order)
+export const deleteOrder = (id) => api.delete(`/order/delete-order/${id}`)
+
 export default api

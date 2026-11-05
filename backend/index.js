@@ -5,6 +5,7 @@ const app = express();
 import Connection from './db/conn.js'
 import productRouter from './routes/productRoutes.js';
 import userRouter from './routes/userRoutes.js';
+import orderRouter from './routes/orderRoutes.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
@@ -27,6 +28,7 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use("/api/product", productRouter)
 app.use("/api/user", userRouter)
+app.use("/api/order", orderRouter)
 app.listen(port, ()=>{
     console.log(`Server is running on port ${port}`)
 })

@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi'
 import { FaFacebookF, FaInstagram, FaXTwitter, FaYoutube, FaLinkedinIn } from 'react-icons/fa6'
 import { useAuth } from '../context/auth'
+import { useCart } from '../context/cart'
 import Avatar from './Avatar'
 
 const navLinks = [
@@ -43,6 +44,7 @@ const Navbar = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, isAdmin, logout } = useAuth()
+  const { count: cartCount } = useCart()
 
   const handleLogout = () => {
     logout()
@@ -142,9 +144,11 @@ const Navbar = () => {
           </Link>
           <Link to="/cart" className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100" aria-label="Cart">
             <FiShoppingCart className="h-6 w-6" />
-            <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-              3
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                {cartCount > 99 ? '99+' : cartCount}
+              </span>
+            )}
           </Link>
 
           {/* Profile dropdown */}

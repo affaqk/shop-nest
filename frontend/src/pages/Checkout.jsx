@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { Navigate, useNavigate } from 'react-router'
 import { FiCreditCard, FiLock, FiTruck, FiDollarSign } from 'react-icons/fi'
 import { FaPaypal } from 'react-icons/fa6'
 import PageHeader from '../components/PageHeader'
 import OrderSummary from '../components/OrderSummary'
-import { cartItems } from '../data/mockData'
+import { useCart } from '../context/cart'
+import { useAuth } from '../context/auth'
+import { createOrder, getErrorMessage } from '../api'
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
@@ -21,21 +24,53 @@ const paymentMethods = [
   { id: 'cod', label: 'Cash on Delivery', icon: FiDollarSign },
 ]
 
+const addressFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zip', 'country']
+
 const Checkout = () => {
   const [payment, setPayment] = useState('card')
+  const [placing, setPlacing] = useState(false)
+  const [error, setError] = useState('')
+  const { items, totals, clearCart } = useCart()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [firstName, ...rest] = (user?.name || '').split(' ')
+
+  if (!items.length) return <Navigate to="/cart" replace />
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    // Card details are only used by the payment form; they are never sent to our server
+    const shippingAddress = Object.fromEntries(addressFields.map((field) => [field, form.get(field)]))
+    setPlacing(true)
+    setError('')
+    try {
+      const order = await createOrder({
+        items: items.map((item) => ({ product: item._id, quantity: item.quantity })),
+        shippingAddress,
+        paymentMethod: payment,
+      })
+      navigate('/profile?tab=orders', { replace: true, state: { placedOrder: order._id } })
+      clearCart()
+    } catch (err) {
+      setError(getErrorMessage(err))
+      setPlacing(false)
+    }
+  }
 
   return (
     <>
       <PageHeader title="Checkout" crumbs={[{ label: 'Cart', to: '/cart' }, { label: 'Checkout' }]} />
-      <form className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[1fr_24rem]">
+      <form onSubmit={handleSubmit} className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[1fr_24rem]">
         <div className="space-y-8">
+          {error && <p className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{error}</p>}
           <section className="rounded-3xl bg-white p-6 ring-1 ring-slate-100 sm:p-8">
             <h2 className="flex items-center gap-3 font-display text-2xl font-semibold text-slate-900">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 font-sans text-sm text-white">1</span>
               Contact Information
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field label="Email" name="email" type="email" required placeholder="you@example.com" />
+              <Field label="Email" name="email" type="email" required defaultValue={user?.email} placeholder="you@example.com" />
               <Field label="Phone" name="phone" type="tel" required placeholder="+1 (555) 000-0000" />
             </div>
           </section>
@@ -46,8 +81,8 @@ const Checkout = () => {
               Shipping Address
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field label="First Name" name="firstName" required />
-              <Field label="Last Name" name="lastName" required />
+              <Field label="First Name" name="firstName" required defaultValue={firstName} />
+              <Field label="Last Name" name="lastName" required defaultValue={rest.join(' ')} />
               <Field label="Street Address" name="address" required className="sm:col-span-2" />
               <Field label="City" name="city" required />
               <Field label="State / Province" name="state" required />
@@ -108,26 +143,27 @@ const Checkout = () => {
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-44 lg:self-start">
-          <OrderSummary>
+          <OrderSummary totals={totals}>
             <ul className="mt-6 max-h-64 space-y-4 overflow-y-auto border-t border-slate-200 pt-6">
-              {cartItems.map((item) => (
-                <li key={item.id} className="flex items-center gap-3">
+              {items.map((item) => (
+                <li key={item._id} className="flex items-center gap-3">
                   <div className="relative">
-                    <img src={item.image} alt={item.name} className="h-14 w-14 rounded-lg object-cover" />
+                    <img src={item.image} alt={item.title} className="h-14 w-14 rounded-lg object-cover" />
                     <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
                       {item.quantity}
                     </span>
                   </div>
-                  <p className="line-clamp-2 flex-1 text-sm font-medium text-slate-800">{item.name}</p>
+                  <p className="line-clamp-2 flex-1 text-sm font-medium text-slate-800">{item.title}</p>
                   <p className="text-sm font-semibold text-slate-900">${(item.price * item.quantity).toFixed(2)}</p>
                 </li>
               ))}
             </ul>
             <button
               type="submit"
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+              disabled={placing}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 py-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
             >
-              <FiLock /> Place Order · $717.33
+              <FiLock /> {placing ? 'Placing Order...' : `Place Order · $${totals.totalPrice.toFixed(2)}`}
             </button>
             <p className="mt-4 text-center text-xs text-slate-400">
               By placing your order you agree to our Terms &amp; Privacy Policy.

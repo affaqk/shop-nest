@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { FiHeart, FiShoppingBag, FiEye } from 'react-icons/fi'
+import { FiHeart, FiShoppingBag, FiEye, FiCheck } from 'react-icons/fi'
 import Rating from './Rating'
 import { categories } from '../data/mockData'
+import { useCart, isStoreProduct } from '../context/cart'
 
 const badgeStyles = {
   'Best Seller': 'bg-amber-500',
@@ -11,6 +13,8 @@ const badgeStyles = {
 }
 
 const ProductCard = ({ product }) => {
+  const { addItem } = useCart()
+  const [added, setAdded] = useState(false)
   // Supports both API products ({ _id, title, image }) and mock products ({ id, name, images })
   const id = product._id || product.id
   const name = product.title || product.name
@@ -60,11 +64,18 @@ const ProductCard = ({ product }) => {
           </Link>
         </div>
 
-        <button
-          className="absolute inset-x-3 bottom-3 flex translate-y-16 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white transition duration-300 hover:bg-blue-600 group-hover:translate-y-0"
-        >
-          <FiShoppingBag className="h-4 w-4" /> Add to Cart
-        </button>
+        {isStoreProduct(product) && (
+          <button
+            onClick={() => {
+              addItem(product)
+              setAdded(true)
+              setTimeout(() => setAdded(false), 1500)
+            }}
+            className="absolute inset-x-3 bottom-3 flex translate-y-16 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white transition duration-300 hover:bg-blue-600 group-hover:translate-y-0"
+          >
+            {added ? <><FiCheck className="h-4 w-4" /> Added</> : <><FiShoppingBag className="h-4 w-4" /> Add to Cart</>}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">

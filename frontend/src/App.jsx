@@ -19,6 +19,7 @@ import AdminLayout from './components/admin/AdminLayout'
 import Dashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/Products'
 import AdminUsers from './pages/admin/Users'
+import AdminOrders from './pages/admin/Orders'
 
 function App() {
   return (
@@ -28,13 +29,13 @@ function App() {
         <Route path="shop" element={<Shop />} />
         <Route path="product/:id" element={<ProductDetails />} />
         <Route path="cart" element={<Cart />} />
-        <Route path="checkout" element={<Checkout />} />
         <Route path="wishlist" element={<Wishlist />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/:token" element={<ResetPassword />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="checkout" element={<Checkout />} />
           <Route path="profile" element={<Profile />} />
         </Route>
         <Route path="about" element={<About />} />
@@ -47,6 +48,7 @@ function App() {
         <Route element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="orders" element={<AdminOrders />} />
           <Route path="users" element={<AdminUsers />} />
         </Route>
       </Route>

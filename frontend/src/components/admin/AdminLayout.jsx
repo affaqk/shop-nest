@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
-import { FiGrid, FiBox, FiUsers, FiLogOut, FiMenu, FiX, FiExternalLink } from 'react-icons/fi'
+import { FiGrid, FiBox, FiShoppingBag, FiUsers, FiLogOut, FiMenu, FiX, FiExternalLink } from 'react-icons/fi'
 import { useAuth } from '../../context/auth'
 import Avatar from '../Avatar'
 
 const links = [
   { to: '/admin', label: 'Dashboard', icon: FiGrid, end: true },
   { to: '/admin/products', label: 'Products', icon: FiBox },
+  { to: '/admin/orders', label: 'Orders', icon: FiShoppingBag },
   { to: '/admin/users', label: 'Users', icon: FiUsers },
 ]
 
