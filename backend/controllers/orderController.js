@@ -181,6 +181,38 @@ export const updateOrderStatus = async (req, res) => {
     }
 }
 
+// Customers can cancel their own order only while it has not shipped yet
+export const cancelOrder = async (req, res) => {
+    try {
+        // One atomic update, so an order that ships at the same moment can't also be cancelled
+        const order = await Order.findOneAndUpdate(
+            { _id: req.params.id, user: req.user._id, status: "Processing" },
+            { status: "Cancelled" },
+            { new: true }
+        );
+
+        if(!order){
+            const existing = await Order.findOne({ _id: req.params.id, user: req.user._id });
+            return res.status(400).json({
+                success : false,
+                message : existing ? `This order is already ${existing.status.toLowerCase()} and can no longer be cancelled` : "Order not found"
+            })
+        }
+
+        return res.status(200).json({
+            success : true,
+            message : "Order cancelled successfully",
+            order
+        })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            success : false,
+            error
+        })
+    }
+}
+
 export const deleteOrder = async (req, res) => {
     try {
         const order = await Order.findByIdAndDelete(req.params.id);

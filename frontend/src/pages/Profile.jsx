@@ -5,7 +5,7 @@ import { FiUser, FiPackage, FiHeart, FiMapPin, FiSettings, FiLogOut, FiEdit2, Fi
 import { user as mockUser } from '../data/mockData'
 import { useAuth } from '../context/auth'
 import { useCart } from '../context/cart'
-import { getUserProfile, updateUser, deleteUser, getMyOrders, getErrorMessage } from '../api'
+import { getUserProfile, updateUser, deleteUser, getMyOrders, cancelOrder, getErrorMessage } from '../api'
 import Avatar from '../components/Avatar'
 import OrderStatus from '../components/OrderStatus'
 import OrderDetails from '../components/OrderDetails'
@@ -21,8 +21,30 @@ const tabs = [
 const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100'
 
-const OrdersTable = ({ orders, loading }) => {
+const OrdersTable = ({ orders, loading, onCancelled }) => {
   const [open, setOpen] = useState(null)
+  const [confirming, setConfirming] = useState(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+
+  const toggle = (id) => {
+    setOpen(open === id ? null : id)
+    setConfirming(null)
+    setCancelError('')
+  }
+
+  const handleCancel = async (order) => {
+    setCancelling(true)
+    setCancelError('')
+    try {
+      onCancelled(await cancelOrder(order._id))
+      setConfirming(null)
+    } catch (err) {
+      setCancelError(getErrorMessage(err))
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   if (!orders.length) {
     return (
@@ -59,7 +81,7 @@ const OrdersTable = ({ orders, loading }) => {
                   <OrderStatus status={order.status} />
                 </td>
                 <td className="py-4 text-right">
-                  <button onClick={() => setOpen(open === order._id ? null : order._id)} className="text-sm font-semibold text-blue-600 hover:underline">
+                  <button onClick={() => toggle(order._id)} className="text-sm font-semibold text-blue-600 hover:underline">
                     {open === order._id ? 'Hide' : 'View'}
                   </button>
                 </td>
@@ -68,6 +90,34 @@ const OrdersTable = ({ orders, loading }) => {
                 <tr>
                   <td colSpan={6} className="pb-6">
                     <OrderDetails order={order} />
+                    {cancelError && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{cancelError}</p>}
+                    {/* Orders can only be cancelled before they ship */}
+                    {order.status === 'Processing' && (
+                      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+                        {confirming === order._id ? (
+                          <>
+                            <span className="text-sm text-slate-600">Cancel this order?</span>
+                            <button
+                              onClick={() => handleCancel(order)}
+                              disabled={cancelling}
+                              className="rounded-full bg-rose-600 px-5 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                            >
+                              {cancelling ? 'Cancelling...' : 'Yes, cancel order'}
+                            </button>
+                            <button onClick={() => setConfirming(null)} className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                              Keep order
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setConfirming(order._id)}
+                            className="rounded-full border border-rose-300 px-5 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                          >
+                            Cancel Order
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
@@ -185,6 +235,8 @@ const Profile = () => {
       .finally(() => setLoadingOrders(false))
   }, [])
 
+  const handleCancelled = (updated) => setOrders((current) => current.map((o) => (o._id === updated._id ? updated : o)))
+
   const totalSpent = orders.filter((o) => o.status !== 'Cancelled').reduce((sum, o) => sum + o.totalPrice, 0)
 
   // Fetch the latest profile from the API
@@ -288,7 +340,7 @@ const Profile = () => {
                     View all
                   </button>
                 </div>
-                <OrdersTable orders={orders.slice(0, 3)} loading={loadingOrders} />
+                <OrdersTable orders={orders.slice(0, 3)} loading={loadingOrders} onCancelled={handleCancelled} />
               </div>
             </>
           )}
@@ -301,7 +353,7 @@ const Profile = () => {
                   🎉 Thank you! Your order has been placed and is now being processed.
                 </p>
               )}
-              <OrdersTable orders={orders} loading={loadingOrders} />
+              <OrdersTable orders={orders} loading={loadingOrders} onCancelled={handleCancelled} />
             </div>
           )}
 

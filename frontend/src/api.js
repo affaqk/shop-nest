@@ -32,6 +32,7 @@ export const createOrder = (data) => api.post('/order/create-order', data).then(
 export const getMyOrders = () => api.get('/order/my-orders').then((res) => res.data.orders || [])
 export const getAllOrders = () => api.get('/order/all').then((res) => res.data.orders || [])
 export const getOrder = (id) => api.get(`/order/order-detail/${id}`).then((res) => res.data.order)
+export const cancelOrder = (id) => api.put(`/order/cancel-order/${id}`).then((res) => res.data.order)
 export const updateOrderStatus = (id, status) => api.put(`/order/update-status/${id}`, { status }).then((res) => res.data.order)
 export const deleteOrder = (id) => api.delete(`/order/delete-order/${id}`)
 
