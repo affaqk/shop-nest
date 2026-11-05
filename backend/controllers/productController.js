@@ -1,9 +1,17 @@
 import Product from "../models/productModel.js";
+import { fileUrl, removeUploadedImage, discardUpload } from "../utils/upload.js";
 
 export const createProduct = async (req, res) => {
     try {
-        const { title, description, price, category, image,  } = req.body;
-        const product = await Product.create({ title, description, price, category, image,  });
+        const { title, description, price, category } = req.body;
+        if(!req.file){
+            return res.status(400).json({
+                success : false,
+                message : "Product image is required"
+            })
+        }
+        const image = fileUrl(req, req.file);
+        const product = await Product.create({ title, description, price, category, image });
 
         if(!product){
             return res.status(400).json({
@@ -18,6 +26,7 @@ export const createProduct = async (req, res) => {
             product
         })
     } catch (error) {
+        discardUpload(req)
         console.log(error)
         return res.status(500).json({
             success : false,
@@ -52,16 +61,30 @@ export const getAllProducts = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
     try {
-        const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-            runValidators : true,
-            new : true
-        })
+        const product = await Product.findById(req.params.id);
 
         if(!product){
+            discardUpload(req)
             return res.status(400).json({
                 success : false,
                 message : "No product found"
             })
+        }
+
+        const oldImage = product.image;
+        for(const field of ["title", "description", "price", "category"]){
+            if(req.body[field] !== undefined){
+                product[field] = req.body[field];
+            }
+        }
+        // A new file replaces the image; otherwise the current one is kept
+        if(req.file){
+            product.image = fileUrl(req, req.file);
+        }
+        await product.save();
+
+        if(req.file){
+            removeUploadedImage(oldImage)
         }
 
         return res.status(200).json({
@@ -70,6 +93,7 @@ export const updateProduct = async (req, res) => {
             product
         })
     } catch(error){
+        discardUpload(req)
         console.log(error)
         return res.status(500).json({
             success : false,
@@ -88,6 +112,8 @@ export const deleteProduct = async (req, res) => {
                 message : "No product found"
             })
         }
+
+        removeUploadedImage(product.image)
 
         return res.status(200).json({
             success : true,

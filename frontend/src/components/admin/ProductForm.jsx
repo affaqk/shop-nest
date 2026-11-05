@@ -1,20 +1,51 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { FiUploadCloud } from 'react-icons/fi'
 import { inputClass, primaryButton, secondaryButton } from './styles'
 
-const emptyProduct = { title: '', description: '', price: '', category: '', image: '' }
+const emptyProduct = { title: '', description: '', price: '', category: '' }
+const MAX_SIZE = 5 * 1024 * 1024
 
 const ProductForm = ({ product, categories = [], onSubmit, onCancel, saving }) => {
   const [form, setForm] = useState(() =>
     product
-      ? { title: product.title, description: product.description, price: product.price, category: product.category, image: product.image }
+      ? { title: product.title, description: product.description, price: product.price, category: product.category }
       : emptyProduct
   )
+  const [file, setFile] = useState(null)
+  const [fileError, setFileError] = useState('')
+  const [preview, setPreview] = useState(product?.image || '')
+
+  // Free the local preview of a picked file once it is replaced or the form closes
+  useEffect(() => () => {
+    if (preview.startsWith('blob:')) URL.revokeObjectURL(preview)
+  }, [preview])
 
   const getValue = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
+  const handleFile = (e) => {
+    const picked = e.target.files[0]
+    if (!picked) return
+    if (picked.size > MAX_SIZE) {
+      setFileError('Image must be 5MB or smaller')
+      e.target.value = ''
+      return
+    }
+    setFileError('')
+    setFile(picked)
+    setPreview(URL.createObjectURL(picked))
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit({ ...form, price: Number(form.price) })
+    if (!product && !file) {
+      setFileError('Please choose a product image')
+      return
+    }
+    const data = new FormData()
+    Object.entries(form).forEach(([key, value]) => data.append(key, value))
+    // When editing, leaving the image alone keeps the current one
+    if (file) data.append('image', file)
+    onSubmit(data)
   }
 
   return (
@@ -42,11 +73,24 @@ const ProductForm = ({ product, categories = [], onSubmit, onCancel, saving }) =
           </datalist>
         </label>
       </div>
-      <label className="block">
-        <span className="mb-1.5 block text-sm font-medium text-slate-700">Image URL</span>
-        <input name="image" type="url" required value={form.image} onChange={getValue} placeholder="https://..." className={inputClass} />
-      </label>
-      {form.image && <img src={form.image} alt="Preview" className="h-32 w-32 rounded-2xl object-cover ring-1 ring-slate-200" />}
+      <div>
+        <span className="mb-1.5 block text-sm font-medium text-slate-700">Product Image</span>
+        <label className="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-slate-300 p-4 transition hover:border-blue-500 hover:bg-blue-50/40">
+          {preview ? (
+            <img src={preview} alt="Preview" className="h-24 w-24 shrink-0 rounded-xl object-cover ring-1 ring-slate-200" />
+          ) : (
+            <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+              <FiUploadCloud className="h-8 w-8" />
+            </span>
+          )}
+          <span className="min-w-0 text-sm">
+            <span className="block font-semibold text-blue-600">{preview ? 'Change image' : 'Upload an image'}</span>
+            <span className="block truncate text-slate-500">{file ? file.name : 'JPG, PNG, WEBP or GIF, up to 5MB'}</span>
+          </span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleFile} className="sr-only" />
+        </label>
+        {fileError && <p className="mt-1.5 text-sm text-rose-600">{fileError}</p>}
+      </div>
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className={secondaryButton}>Cancel</button>
         <button type="submit" disabled={saving} className={primaryButton}>
